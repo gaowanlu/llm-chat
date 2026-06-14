@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Chat</title>
+  <style>
+    :root {
+      --bg: #1a1b2e;
+      --surface: #23243a;
+      --surface-hover: #2a2b44;
+      --primary: #7c6ff7;
+      --primary-hover: #6a5ce7;
+      --text: #e8e8f0;
+      --text-secondary: #9090a8;
+      --user-bubble: #7c6ff7;
+      --ai-bubble: #2a2b44;
+      --border: #3a3b54;
+      --error: #f76f6f;
+      --radius: 12px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    header h1 .icon { font-size: 22px; }
+
+    .status-badge {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--surface-hover);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: color 0.2s;
+      user-select: none;
+    }
+    .status-badge:hover { color: var(--text); }
+    .status-badge.online { background: #2d7a4f; color: #a0f0c0; }
+    .status-badge.offline { background: #7a2d2d; color: #f0a0a0; }
+
+    /* Chat area */
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 0;
+      scroll-behavior: smooth;
+    }
+
+    #chat::-webkit-scrollbar { width: 6px; }
+    #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .message {
+      max-width: 780px;
+      margin: 0 auto 16px;
+      padding: 0 20px;
+      display: flex;
+      gap: 12px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .avatar.user { background: var(--user-bubble); }
+    .avatar.ai { background: var(--primary); }
+
+    .bubble {
+      padding: 10px 16px;
+      border-radius: var(--radius);
+      line-height: 1.65;
+      font-size: 15px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message.user .bubble {
+      background: var(--user-bubble);
+      color: #fff;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message.ai .bubble {
+      background: var(--ai-bubble);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    /* Typing indicator */
+    .typing .dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--text-secondary);
+      animation: typingBounce 1.2s infinite;
+      margin: 0 1px;
+    }
+    .typing .dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    /* Welcome screen */
+    #welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #welcome .logo { font-size: 48px; margin-bottom: 16px; }
+    #welcome h2 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+    #welcome p { color: var(--text-secondary); font-size: 15px; }
+
+    /* Input area */
+    #input-area {
+      border-top: 1px solid var(--border);
+      padding: 16px 20px;
+      flex-shrink: 0;
+      background: var(--surface);
+    }
+
+    .input-wrapper {
+      max-width: 780px;
+      margin: 0 auto;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    #input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+      resize: none;
+      max-height: 160px;
+      line-height: 1.5;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #input:focus { border-color: var(--primary); }
+    #input::placeholder { color: var(--text-secondary); }
+
+    #send {
+      padding: 12px 20px;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--primary);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.2s, opacity 0.2s;
+      height: 46px;
+    }
+
+    #send:hover { background: var(--primary-hover); }
+    #send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #cancel {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 15px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.2s, color 0.2s;
+      display: none;
+      height: 46px;
+    }
+    #cancel:hover { background: var(--surface-hover); color: var(--text); }
+
+    .hint {
+      max-width: 780px;
+      margin: 0 auto;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1><span class="icon">💬</span> LLM Chat</h1>
+  <span class="status-badge" id="status" onclick="resetConnection()">检测中…</span>
+</header>
+
+<div id="chat">
+  <div id="welcome">
+    <div class="logo">🤖</div>
+    <h2>开始对话</h2>
+    <p>下方输入你的问题，点击发送即可开始</p>
+  </div>
+</div>
+
+<div id="input-area">
+  <div class="input-wrapper">
+    <textarea id="input" rows="1" placeholder="输入消息… (Enter 发送，Shift+Enter 换行)" wrap="soft"></textarea>
+    <button id="send" onclick="sendMessage()">发送</button>
+    <button id="cancel" onclick="cancelStreaming()">取消</button>
+  </div>
+  <div class="hint">按 Enter 发送 · 模型: 本地 LLM</div>
+</div>
+
+<script>
+  const chat = document.getElementById("chat");
+  const input = document.getElementById("input");
+  const sendBtn = document.getElementById("send");
+  const welcome = document.getElementById("welcome");
+  const statusBadge = document.getElementById("status");
+
+  let messages = [];
+  let isStreaming = false;
+  let isConnected = false;
+  let currentController = null; // AbortController for canceling streaming requests
+
+  // Auto-resize textarea
+  input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 160) + "px";
+  });
+
+  // Enter to send
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  async function checkHealth() {
+    try {
+      const res = await fetch("/api/health");
+      if (res.ok) {
+        isConnected = true;
+        statusBadge.textContent = "已连接";
+        statusBadge.className = "status-badge online";
+      }
+    } catch {
+      isConnected = false;
+      statusBadge.textContent = "未连接";
+      statusBadge.className = "status-badge offline";
+    }
+  }
+
+  function resetConnection() {
+    checkHealth();
+  }
+
+  function addMessage(role, content) {
+    if (welcome) welcome.style.display = "none";
+
+    const msg = document.createElement("div");
+    msg.className = `message ${role}`;
+
+    const avatar = document.createElement("div");
+    avatar.className = `avatar ${role}`;
+    avatar.textContent = role === "user" ? "🧑" : "🤖";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = content;
+
+    msg.appendChild(avatar);
+    msg.appendChild(bubble);
+    chat.appendChild(msg);
+    scrollToBottom();
+    return bubble;
+  }
+
+  function showTyping() {
+    if (welcome) welcome.style.display = "none";
+    const msg = document.createElement("div");
+    msg.className = "message ai";
+    msg.id = "typing-msg";
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar ai";
+    avatar.textContent = "🤖";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble typing";
+    bubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+
+    msg.appendChild(avatar);
+    msg.appendChild(bubble);
+    chat.appendChild(msg);
+    scrollToBottom();
+  }
+
+  function removeTyping() {
+    const el = document.getElementById("typing-msg");
+    if (el) el.remove();
+  }
+
+  function scrollToBottom() {
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text || isStreaming) return;
+
+    input.value = "";
+    input.style.height = "auto";
+
+    addMessage("user", text);
+    messages.push({ role: "user", content: text });
+
+    isStreaming = true;
+    sendBtn.style.display = "none";
+    document.getElementById("cancel").style.display = "inline-block";
+    showTyping();
+
+    // Create a new AbortController for this request
+    currentController = new AbortController();
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages }),
+        signal: currentController.signal,
+      });
+
+      removeTyping();
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const bubble = addMessage("ai", "");
+      let fullContent = "";
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6);
+          if (data === "") continue;
+
+          try {
+            const json = JSON.parse(data);
+            if (json.error) {
+              bubble.textContent = `⚠️ ${json.error}`;
+              messages.push({ role: "assistant", content: `⚠️ ${json.error}` });
+              return;
+            }
+            if (json.done) {
+              messages.push({ role: "assistant", content: fullContent });
+              return;
+            }
+            if (json.content !== undefined) {
+              fullContent += json.content;
+              bubble.textContent = fullContent;
+              scrollToBottom();
+            }
+          } catch { /* skip parse errors */ }
+        }
+      }
+
+      // Handle connection interrupted mid-stream (no "done" received)
+      if (fullContent === "") {
+        removeTyping();
+        addMessage("ai", "⚠️ 连接中断，未能收到回复。");
+        messages.push({ role: "assistant", content: "⚠️ 连接中断，未能收到回复。" });
+      }
+    } catch (err) {
+      // Ignore AbortError — it means the user canceled
+      if (err.name === "AbortError") {
+        addMessage("ai", "（已取消）");
+        messages.push({ role: "assistant", content: "（已取消）" });
+      } else {
+        removeTyping();
+        addMessage("ai", `⚠️ 请求失败: ${err.message}`);
+        messages.push({ role: "assistant", content: `⚠️ 请求失败: ${err.message}` });
+      }
+    } finally {
+      // Always restore UI state
+      currentController = null;
+      isStreaming = false;
+      sendBtn.style.display = "inline-block";
+      document.getElementById("cancel").style.display = "none";
+      sendBtn.disabled = false;
+    }
+  }
+
+  function cancelStreaming() {
+    if (currentController) {
+      currentController.abort();
+    }
+  }
+
+  // Check health on load
+  checkHealth();
+</script>
+
+</body>
+</html>
