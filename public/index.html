@@ -3,35 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLM Chat</title>
+  <title>Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital@0;1&family=Inter:wght@400;500;600&family=Sora:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #1a1b2e;
-      --surface: #23243a;
-      --surface-hover: #2a2b44;
-      --primary: #7c6ff7;
-      --primary-hover: #6a5ce7;
-      --text: #e8e8f0;
-      --text-secondary: #9090a8;
-      --user-bubble: #7c6ff7;
-      --ai-bubble: #2a2b44;
-      --border: #3a3b54;
-      --error: #f76f6f;
-      --sidebar-width: 280px;
-      --radius: 12px;
+      --void: #0a0a0a;
+      --surface: #111111;
+      --surface-hover: #1a1a1a;
+      --border: #2a2a2a;
+      --text: #f5f0e8;
+      --text-secondary: #7a7a7a;
+      --text-tertiary: #4a4a4a;
+      --accent: #8ab648;
+      --accent-dim: rgba(138, 182, 72, 0.12);
+      --amber: #c4956a;
+      --error: #d46a6a;
+      --sidebar-width: 260px;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      display: flex;
+    html, body {
+      height: 100%;
+      overflow: hidden;
     }
 
-    /* Sidebar */
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--void);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────────── */
+
+    #app {
+      display: flex;
+      height: 100%;
+    }
+
+    /* ── Sidebar ────────────────────────────────────────────────────── */
+
     #sidebar {
       width: var(--sidebar-width);
       background: var(--surface);
@@ -39,7 +56,7 @@
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
-      transition: transform 0.25s ease;
+      transition: transform 0.2s ease, opacity 0.2s ease;
       z-index: 100;
     }
 
@@ -47,33 +64,36 @@
       transform: translateX(-100%);
       position: absolute;
       height: 100%;
+      opacity: 0;
+      pointer-events: none;
     }
 
     .sidebar-header {
-      padding: 16px;
+      padding: 20px 16px 16px;
       border-bottom: 1px solid var(--border);
     }
 
     .new-chat-btn {
       width: 100%;
-      padding: 10px 14px;
-      border: 1px dashed var(--border);
-      border-radius: var(--radius);
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
       background: transparent;
       color: var(--text-secondary);
-      font-size: 14px;
+      font-size: 13px;
+      font-family: "IBM Plex Mono", monospace;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.15s;
       display: flex;
       align-items: center;
       gap: 8px;
       justify-content: center;
+      letter-spacing: 0.02em;
     }
 
     .new-chat-btn:hover {
-      border-color: var(--primary);
+      border-color: var(--text-secondary);
       color: var(--text);
-      background: var(--surface-hover);
     }
 
     .conversations-list {
@@ -82,56 +102,63 @@
       padding: 8px;
     }
 
-    .conversations-list::-webkit-scrollbar { width: 4px; }
-    .conversations-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .conversations-list::-webkit-scrollbar { width: 3px; }
+    .conversations-list::-webkit-scrollbar-thumb { background: var(--border); }
 
     .conv-item {
-      padding: 10px 14px;
-      border-radius: 8px;
+      padding: 8px 12px;
+      border-radius: 5px;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.12s;
       display: flex;
-      align-items: center;
-      gap: 8px;
+      flex-direction: column;
+      gap: 3px;
       position: relative;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
 
     .conv-item:hover { background: var(--surface-hover); }
     .conv-item.active { background: var(--surface-hover); }
 
-    .conv-item .conv-title {
-      flex: 1;
-      font-size: 14px;
+    .conv-title {
+      font-size: 13px;
+      color: var(--text);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    .conv-item .conv-date {
+    .conv-meta {
       font-size: 11px;
-      color: var(--text-secondary);
-      flex-shrink: 0;
-      margin-right: 4px;
+      font-family: "IBM Plex Mono", monospace;
+      color: var(--text-tertiary);
     }
 
-    .conv-item .delete-conv {
+    .conv-actions {
+      position: absolute;
+      top: 6px;
+      right: 8px;
       opacity: 0;
+      transition: opacity 0.12s;
+    }
+
+    .conv-item:hover .conv-actions { opacity: 1; }
+
+    .delete-btn {
       background: none;
       border: none;
       color: var(--error);
+      font-size: 12px;
       cursor: pointer;
-      font-size: 14px;
-      padding: 2px 4px;
-      border-radius: 4px;
-      flex-shrink: 0;
-      transition: opacity 0.15s;
+      padding: 2px 5px;
+      border-radius: 3px;
+      transition: background 0.12s;
     }
 
-    .conv-item:hover .delete-conv { opacity: 1; }
-    .conv-item .delete-conv:hover { background: rgba(247, 111, 111, 0.15); }
+    .delete-btn:hover { background: rgba(212, 106, 106, 0.1); }
 
-    /* Main area */
+    /* ── Main ───────────────────────────────────────────────────────── */
+
     #main {
       flex: 1;
       display: flex;
@@ -141,13 +168,12 @@
 
     /* Header */
     header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 24px;
+      padding: 16px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
     }
 
     .header-left {
@@ -158,13 +184,13 @@
 
     #toggle-sidebar {
       background: none;
-      border: none;
+      border: 1px solid var(--border);
       color: var(--text-secondary);
-      font-size: 20px;
+      font-size: 16px;
       cursor: pointer;
-      padding: 4px;
-      border-radius: 6px;
-      transition: background 0.15s, color 0.15s;
+      padding: 5px 8px;
+      border-radius: 4px;
+      transition: all 0.15s;
       display: flex;
       align-items: center;
     }
@@ -172,107 +198,135 @@
     #toggle-sidebar:hover { background: var(--surface-hover); color: var(--text); }
 
     header h1 {
-      font-size: 18px;
+      font-family: "Sora", sans-serif;
+      font-size: 16px;
       font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .header-right {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
     }
 
-    header h1 .icon { font-size: 22px; }
-
-    .status-badge {
-      font-size: 12px;
+    .status-indicator {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 11px;
       padding: 4px 10px;
-      border-radius: 20px;
-      background: var(--surface-hover);
+      border-radius: 3px;
+      border: 1px solid var(--border);
       color: var(--text-secondary);
       cursor: pointer;
-      transition: color 0.2s;
-      user-select: none;
+      transition: all 0.15s;
+      letter-spacing: 0.03em;
     }
-    .status-badge:hover { color: var(--text); }
-    .status-badge.online { background: #2d7a4f; color: #a0f0c0; }
-    .status-badge.offline { background: #7a2d2d; color: #f0a0a0; }
 
-    /* Chat area */
-    #chat {
+    .status-indicator:hover { color: var(--text); border-color: var(--text-secondary); }
+    .status-indicator.online { border-color: var(--accent); color: var(--accent); }
+    .status-indicator.offline { border-color: var(--error); color: var(--error); opacity: 0.7; }
+
+    /* ── Chat ───────────────────────────────────────────────────────── */
+
+    #chat-area {
       flex: 1;
       overflow-y: auto;
-      padding: 20px 0;
       scroll-behavior: smooth;
     }
 
-    #chat::-webkit-scrollbar { width: 6px; }
-    #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    #chat-area::-webkit-scrollbar { width: 4px; }
+    #chat-area::-webkit-scrollbar-thumb { background: var(--border); }
 
-    .message {
-      max-width: 780px;
-      margin: 0 auto 16px;
-      padding: 0 20px;
-      display: flex;
-      gap: 12px;
-      animation: fadeIn 0.25s ease;
+    .messages-container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 24px 120px;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
+    /* Message blocks */
+    .message {
+      margin-bottom: 28px;
+      animation: messageIn 0.3s ease;
+    }
+
+    @keyframes messageIn {
+      from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .avatar {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
+    .message-header {
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      flex-shrink: 0;
+      gap: 10px;
+      margin-bottom: 8px;
     }
 
-    .avatar.user { background: var(--user-bubble); }
-    .avatar.ai { background: var(--primary); }
+    .role-label {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
 
-    .bubble {
-      padding: 10px 16px;
-      border-radius: var(--radius);
-      line-height: 1.65;
+    .role-label.user { color: var(--text); }
+    .role-label.ai { color: var(--accent); }
+
+    .role-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .message-time {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      color: var(--text-tertiary);
+    }
+
+    .message-body {
+      padding-left: 0;
       font-size: 15px;
-      white-space: pre-wrap;
-      word-break: break-word;
+      line-height: 1.7;
+      color: var(--text);
     }
 
-    .message.user .bubble {
-      background: var(--user-bubble);
-      color: #fff;
-      border-bottom-left-radius: 4px;
+    .message-body p { margin-bottom: 12px; }
+    .message-body p:last-child { margin-bottom: 0; }
+
+    .message-body code {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 13px;
+      background: var(--surface);
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: var(--amber);
     }
 
-    .message.ai .bubble {
-      background: var(--ai-bubble);
+    .message-body pre {
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-bottom-left-radius: 4px;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 12px 0;
+      overflow-x: auto;
     }
 
-    /* Typing indicator */
-    .typing .dot {
-      display: inline-block;
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--text-secondary);
-      animation: typingBounce 1.2s infinite;
-      margin: 0 1px;
-    }
-    .typing .dot:nth-child(2) { animation-delay: 0.2s; }
-    .typing .dot:nth-child(3) { animation-delay: 0.4s; }
-
-    @keyframes typingBounce {
-      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-      30% { transform: translateY(-5px); opacity: 1; }
+    .message-body pre code {
+      background: none;
+      padding: 0;
+      border-radius: 0;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.6;
     }
 
-    /* Welcome screen */
+    .message.error .message-body {
+      color: var(--error);
+    }
+
+    /* ── Welcome ────────────────────────────────────────────────────── */
+
     #welcome {
       display: flex;
       flex-direction: column;
@@ -280,91 +334,159 @@
       justify-content: center;
       height: 100%;
       text-align: center;
-      padding: 20px;
+      padding: 24px;
     }
 
-    #welcome .logo { font-size: 48px; margin-bottom: 16px; }
-    #welcome h2 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
-    #welcome p { color: var(--text-secondary); font-size: 15px; }
+    .welcome-title {
+      font-family: "Sora", sans-serif;
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
 
-    /* Input area */
+    .welcome-sub {
+      font-size: 14px;
+      color: var(--text-secondary);
+      max-width: 360px;
+      line-height: 1.6;
+    }
+
+    .welcome-hint {
+      margin-top: 32px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Thinking indicator ─────────────────────────────────────────── */
+
+    .thinking {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+    }
+
+    .thinking-ring {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: breathe 2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 0.3; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
+    .thinking-label {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px;
+      color: var(--accent);
+      font-style: italic;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Input ──────────────────────────────────────────────────────── */
+
     #input-area {
       border-top: 1px solid var(--border);
-      padding: 16px 20px;
+      padding: 16px 24px;
       flex-shrink: 0;
-      background: var(--surface);
+      background: var(--void);
     }
 
-    .input-wrapper {
-      max-width: 780px;
+    .input-container {
+      max-width: 720px;
       margin: 0 auto;
+    }
+
+    .input-box {
       display: flex;
-      gap: 10px;
-      align-items: flex-end;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .input-box:focus-within {
+      border-color: var(--accent);
     }
 
     #input {
       flex: 1;
       padding: 12px 16px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--bg);
+      border: none;
+      background: transparent;
       color: var(--text);
-      font-size: 15px;
-      font-family: inherit;
+      font-size: 14px;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
       resize: none;
-      max-height: 160px;
       line-height: 1.5;
       outline: none;
-      transition: border-color 0.2s;
+      min-height: 44px;
+      max-height: 160px;
     }
 
-    #input:focus { border-color: var(--primary); }
-    #input::placeholder { color: var(--text-secondary); }
+    #input::placeholder { color: var(--text-tertiary); }
+
+    .input-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+    }
 
     #send {
-      padding: 12px 20px;
+      padding: 8px 16px;
       border: none;
-      border-radius: var(--radius);
-      background: var(--primary);
-      color: #fff;
-      font-size: 15px;
-      font-weight: 500;
+      border-radius: 4px;
+      background: var(--accent);
+      color: var(--void);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: "IBM Plex Mono", monospace;
       cursor: pointer;
-      flex-shrink: 0;
-      transition: background 0.2s, opacity 0.2s;
-      height: 46px;
+      transition: all 0.15s;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
     }
 
-    #send:hover { background: var(--primary-hover); }
-    #send:disabled { opacity: 0.5; cursor: not-allowed; }
+    #send:hover { opacity: 0.85; }
+    #send:disabled { opacity: 0.35; cursor: not-allowed; }
 
     #cancel {
-      padding: 12px 16px;
+      padding: 8px 12px;
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: 4px;
       background: transparent;
       color: var(--text-secondary);
-      font-size: 15px;
+      font-size: 12px;
+      font-family: "IBM Plex Mono", monospace;
       cursor: pointer;
-      flex-shrink: 0;
-      transition: background 0.2s, color 0.2s;
-      display: none;
-      height: 46px;
+      transition: all 0.15s;
+      white-space: nowrap;
     }
+
     #cancel:hover { background: var(--surface-hover); color: var(--text); }
 
-    .hint {
-      max-width: 780px;
-      margin: 0 auto;
+    .input-footer {
       text-align: center;
-      font-size: 12px;
-      color: var(--text-secondary);
       margin-top: 8px;
-      opacity: 0.7;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      color: var(--text-tertiary);
+      letter-spacing: 0.04em;
     }
 
-    /* Empty state for sidebar */
+    /* ── Empty sidebar ──────────────────────────────────────────────── */
+
     .sidebar-empty {
       flex: 1;
       display: flex;
@@ -375,70 +497,116 @@
     }
 
     .sidebar-empty p {
-      font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.6;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      line-height: 1.7;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────────── */
+
+    @media (max-width: 768px) {
+      #sidebar {
+        position: absolute;
+        height: 100%;
+        z-index: 200;
+      }
+      #sidebar.hidden { transform: translateX(-100%); }
+      .messages-container { padding: 20px 16px 100px; }
+      #input-area { padding: 12px 16px; }
+      header { padding: 12px 16px; }
+    }
+
+    /* ── Reduced motion ─────────────────────────────────────────────── */
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ── Focus visible ──────────────────────────────────────────────── */
+
+    :focus-visible {
+      outline: 1px solid var(--accent);
+      outline-offset: 2px;
     }
   </style>
 </head>
 <body>
 
-<!-- Sidebar -->
-<div id="sidebar">
-  <div class="sidebar-header">
-    <button class="new-chat-btn" onclick="newConversation()">
-      <span>✏️</span> 新建对话
-    </button>
-  </div>
-  <div class="conversations-list" id="conversations-list">
-    <div class="sidebar-empty"><p>暂无对话记录<br>点击上方按钮开始</p></div>
-  </div>
-</div>
-
-<!-- Main area -->
-<div id="main">
-  <header>
-    <div class="header-left">
-      <button id="toggle-sidebar" onclick="toggleSidebar()" title="切换侧边栏">☰</button>
-      <h1><span class="icon">💬</span> LLM Chat</h1>
+<div id="app">
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button class="new-chat-btn" onclick="newConversation()">
+        <span>+</span> 新建对话
+      </button>
     </div>
-    <span class="status-badge" id="status" onclick="resetConnection()">检测中…</span>
-  </header>
+    <div class="conversations-list" id="conversations-list"></div>
+  </aside>
 
-  <div id="chat">
-    <div id="welcome">
-      <div class="logo">🤖</div>
-      <h2>开始对话</h2>
-      <p>下方输入你的问题，点击发送即可开始</p>
-    </div>
-  </div>
+  <!-- Main -->
+  <main id="main">
+    <header>
+      <div class="header-left">
+        <button id="toggle-sidebar" onclick="toggleSidebar()" title="切换侧边栏" aria-label="切换侧边栏">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+            <line x1="1" y1="3" x2="13" y2="3"/>
+            <line x1="1" y1="7" x2="13" y2="7"/>
+            <line x1="1" y1="11" x2="13" y2="11"/>
+          </svg>
+        </button>
+        <h1>Chat</h1>
+      </div>
+      <div class="header-right">
+        <span class="status-indicator" id="status" onclick="checkHealth()">检测中</span>
+      </div>
+    </header>
 
-  <div id="input-area">
-    <div class="input-wrapper">
-      <textarea id="input" rows="1" placeholder="输入消息… (Enter 发送，Shift+Enter 换行)" wrap="soft"></textarea>
-      <button id="send" onclick="sendMessage()">发送</button>
-      <button id="cancel" onclick="cancelStreaming()">取消</button>
+    <div id="chat-area">
+      <div id="welcome">
+        <div class="welcome-title">开始对话</div>
+        <div class="welcome-sub">在下方输入你的问题，与 AI 进行对话</div>
+        <div class="welcome-hint">Enter 发送 · Shift+Enter 换行</div>
+      </div>
+      <div class="messages-container" id="messages-container"></div>
     </div>
-    <div class="hint">按 Enter 发送 · 模型: 本地 LLM</div>
-  </div>
+
+    <div id="input-area">
+      <div class="input-container">
+        <div class="input-box">
+          <textarea id="input" rows="1" placeholder="输入消息…" wrap="soft"></textarea>
+          <div class="input-actions">
+            <button id="send" onclick="sendMessage()">发送</button>
+            <button id="cancel" onclick="cancelStreaming()" style="display:none">取消</button>
+          </div>
+        </div>
+        <div class="input-footer">模型: 本地 LLM · 数据保存在本地</div>
+      </div>
+    </div>
+  </main>
 </div>
 
 <script>
-  const chat = document.getElementById("chat");
+  // ── DOM refs ────────────────────────────────────────────────────────
   const input = document.getElementById("input");
   const sendBtn = document.getElementById("send");
+  const cancelBtn = document.getElementById("cancel");
   const welcome = document.getElementById("welcome");
-  const statusBadge = document.getElementById("status");
+  const chatArea = document.getElementById("chat-area");
+  const messagesContainer = document.getElementById("messages-container");
+  const statusEl = document.getElementById("status");
   const sidebar = document.getElementById("sidebar");
   const convListEl = document.getElementById("conversations-list");
 
-  // ── Conversation storage ──────────────────────────────────────────
+  // ── Storage ─────────────────────────────────────────────────────────
   const STORAGE_KEY = "llm-chat-conversations";
 
   function loadConversations() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
   }
 
   function saveConversations(convs) {
@@ -451,75 +619,71 @@
 
   let conversations = loadConversations();
   let currentConvId = null;
-
-  // Current conversation's messages (in memory, synced to storage on change)
   let messages = [];
 
-  // ── Sidebar logic ─────────────────────────────────────────────────
+  // ── Sidebar ─────────────────────────────────────────────────────────
   function toggleSidebar() {
     sidebar.classList.toggle("hidden");
+  }
+
+  function formatDate(ts) {
+    const now = new Date();
+    const d = new Date(ts);
+    const diffMs = now - d;
+    const min = Math.floor(diffMs / 60000);
+    const hr = Math.floor(diffMs / 3600000);
+    const day = Math.floor(diffMs / 86400000);
+    if (min < 1) return "刚刚";
+    if (min < 60) return min + "m";
+    if (hr < 24) return hr + "h";
+    if (day < 7) return day + "d";
+    return d.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" });
   }
 
   function renderConversationList() {
     convListEl.innerHTML = "";
     if (conversations.length === 0) {
-      convListEl.innerHTML = '<div class="sidebar-empty"><p>暂无对话记录<br>点击上方按钮开始</p></div>';
+      convListEl.innerHTML = '<div class="sidebar-empty"><p>暂无对话记录</p></div>';
       return;
     }
-    // Sort by updatedAt desc
     conversations.sort((a, b) => b.updatedAt - a.updatedAt);
     for (const conv of conversations) {
       const item = document.createElement("div");
-      item.className = `conv-item${conv.id === currentConvId ? " active" : ""}`;
+      item.className = "conv-item" + (conv.id === currentConvId ? " active" : "");
 
-      const title = document.createElement("span");
+      const title = document.createElement("div");
       title.className = "conv-title";
       title.textContent = conv.title;
       title.title = conv.title;
 
-      const date = document.createElement("span");
-      date.className = "conv-date";
-      date.textContent = formatDate(conv.updatedAt);
+      const meta = document.createElement("div");
+      meta.className = "conv-meta";
+      meta.textContent = formatDate(conv.updatedAt);
+
+      const actions = document.createElement("div");
+      actions.className = "conv-actions";
 
       const delBtn = document.createElement("button");
-      delBtn.className = "delete-conv";
-      delBtn.textContent = "🗑️";
+      delBtn.className = "delete-btn";
+      delBtn.textContent = "×";
       delBtn.title = "删除此对话";
       delBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         deleteConversation(conv.id);
       });
+      actions.appendChild(delBtn);
 
       item.appendChild(title);
-      item.appendChild(date);
-      item.appendChild(delBtn);
+      item.appendChild(meta);
+      item.appendChild(actions);
       item.addEventListener("click", () => switchConversation(conv.id));
 
       convListEl.appendChild(item);
     }
   }
 
-  function formatDate(ts) {
-    const d = new Date(ts);
-    const now = new Date();
-    const diffMs = now - d;
-    const diffMin = Math.floor(diffMs / 60000);
-    const diffHr = Math.floor(diffMs / 3600000);
-    const diffDay = Math.floor(diffMs / 86400000);
-
-    if (diffMin < 1) return "刚刚";
-    if (diffMin < 60) return diffMin + "分钟前";
-    if (diffHr < 24) return diffHr + "小时前";
-    if (diffDay < 7) return diffDay + "天前";
-    return d.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" });
-  }
-
   function newConversation() {
-    // Save current conversation first
-    if (currentConvId && messages.length > 0) {
-      saveCurrentToStorage();
-    }
-
+    if (currentConvId && messages.length > 0) saveCurrentToStorage();
     const conv = {
       id: generateId(),
       title: "新对话",
@@ -537,16 +701,11 @@
   }
 
   function switchConversation(convId) {
-    // Save current conversation first
-    if (currentConvId && messages.length > 0) {
-      saveCurrentToStorage();
-    }
-
+    if (currentConvId && messages.length > 0) saveCurrentToStorage();
     const conv = conversations.find((c) => c.id === convId);
     if (!conv) return;
-
     currentConvId = conv.id;
-    messages = [...conv.messages]; // shallow copy
+    messages = [...conv.messages];
     renderConversationList();
     renderMessages();
   }
@@ -554,7 +713,6 @@
   function deleteConversation(convId) {
     conversations = conversations.filter((c) => c.id !== convId);
     saveConversations(conversations);
-
     if (currentConvId === convId) {
       currentConvId = null;
       messages = [];
@@ -569,38 +727,27 @@
     if (!conv) return;
     conv.messages = messages.map((m) => ({ ...m }));
     conv.updatedAt = Date.now();
-    // Update title from first user message
-    const firstUserMsg = messages.find((m) => m.role === "user");
-    if (firstUserMsg && conv.title === "新对话") {
-      conv.title = firstUserMsg.content.slice(0, 30) + (firstUserMsg.content.length > 30 ? "…" : "");
+    const firstUser = messages.find((m) => m.role === "user");
+    if (firstUser && conv.title === "新对话") {
+      conv.title = firstUser.content.slice(0, 30) + (firstUser.content.length > 30 ? "…" : "");
     }
-    saveConversations(conversations);
-  }
-
-  function syncCurrentFromStorage() {
-    const conv = conversations.find((c) => c.id === currentConvId);
-    if (!conv) return;
-    conv.messages = messages.map((m) => ({ ...m }));
-    conv.updatedAt = Date.now();
     saveConversations(conversations);
   }
 
   function showWelcome() {
     welcome.style.display = "flex";
-    // Remove all message elements
-    chat.querySelectorAll(".message").forEach((el) => el.remove());
+    messagesContainer.innerHTML = "";
   }
 
   function renderMessages() {
     welcome.style.display = messages.length === 0 ? "flex" : "none";
-    // Remove old messages
-    chat.querySelectorAll(".message").forEach((el) => el.remove());
+    messagesContainer.innerHTML = "";
     for (const msg of messages) {
-      addMessage(msg.role, msg.content, false);
+      appendMessage(msg.role, msg.content, false);
     }
   }
 
-  // ── Chat logic ────────────────────────────────────────────────────
+  // ── Chat ────────────────────────────────────────────────────────────
   let isStreaming = false;
   let isConnected = false;
   let currentController = null;
@@ -619,76 +766,124 @@
     }
   });
 
-  async function checkHealth() {
-    try {
-      const res = await fetch("/api/health");
-      if (res.ok) {
+  function checkHealth() {
+    fetch("/api/health")
+      .then((r) => r.ok ? r.json() : Promise.reject())
+      .then(() => {
         isConnected = true;
-        statusBadge.textContent = "已连接";
-        statusBadge.className = "status-badge online";
-      }
-    } catch {
-      isConnected = false;
-      statusBadge.textContent = "未连接";
-      statusBadge.className = "status-badge offline";
-    }
+        statusEl.textContent = "已连接";
+        statusEl.className = "status-indicator online";
+      })
+      .catch(() => {
+        isConnected = false;
+        statusEl.textContent = "未连接";
+        statusEl.className = "status-indicator offline";
+      });
   }
 
-  function resetConnection() {
-    checkHealth();
-  }
-
-  function addMessage(role, content, animate = true) {
-    if (welcome && messages.length === 0 && role !== undefined) {
+  function appendMessage(role, content, animate = true) {
+    if (messages.length === 0 && role !== undefined) {
       welcome.style.display = "none";
     }
 
     const msg = document.createElement("div");
-    msg.className = `message ${role}`;
+    msg.className = "message" + (role === "user" ? " user" : " ai");
     if (!animate) msg.style.animation = "none";
 
-    const avatar = document.createElement("div");
-    avatar.className = `avatar ${role}`;
-    avatar.textContent = role === "user" ? "🧑" : "🤖";
+    // Header with role label
+    const header = document.createElement("div");
+    header.className = "message-header";
 
-    const bubble = document.createElement("div");
-    bubble.className = "bubble";
-    bubble.textContent = content;
+    const label = document.createElement("span");
+    label.className = "role-label " + role;
+    label.textContent = role === "user" ? "> user" : "> ai";
 
-    msg.appendChild(avatar);
-    msg.appendChild(bubble);
-    chat.appendChild(msg);
+    const line = document.createElement("span");
+    line.className = "role-line";
+    line.style.minWidth = "12px";
+
+    const time = document.createElement("span");
+    time.className = "message-time";
+    time.textContent = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+
+    header.appendChild(label);
+    header.appendChild(line);
+    header.appendChild(time);
+
+    // Body
+    const body = document.createElement("div");
+    body.className = "message-body";
+    if (content) {
+      body.innerHTML = formatContent(content);
+    } else {
+      body.innerHTML = '<span style="color:var(--text-tertiary)">—</span>';
+    }
+
+    msg.appendChild(header);
+    msg.appendChild(body);
+    messagesContainer.appendChild(msg);
     scrollToBottom();
-    return bubble;
+    return body;
   }
 
-  function showTyping() {
-    if (welcome) welcome.style.display = "none";
+  function formatContent(text) {
+    // Basic markdown-like formatting
+    // Code blocks
+    text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+      return `<pre><code>${escapeHtml(code.trim())}</code></pre>`;
+    });
+    // Inline code
+    text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+    // Paragraphs
+    text = text.split("\n\n").map(p => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`).join("");
+    return text;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function showThinking() {
+    welcome.style.display = "none";
     const msg = document.createElement("div");
     msg.className = "message ai";
-    msg.id = "typing-msg";
+    msg.id = "thinking-msg";
 
-    const avatar = document.createElement("div");
-    avatar.className = "avatar ai";
-    avatar.textContent = "🤖";
+    const header = document.createElement("div");
+    header.className = "message-header";
 
-    const bubble = document.createElement("div");
-    bubble.className = "bubble typing";
-    bubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+    const label = document.createElement("span");
+    label.className = "role-label ai";
+    label.textContent = "> ai";
 
-    msg.appendChild(avatar);
-    msg.appendChild(bubble);
-    chat.appendChild(msg);
+    const line = document.createElement("span");
+    line.className = "role-line";
+
+    const time = document.createElement("span");
+    time.className = "message-time";
+    time.textContent = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+
+    header.appendChild(label);
+    header.appendChild(line);
+    header.appendChild(time);
+
+    const body = document.createElement("div");
+    body.className = "message-body thinking";
+    body.innerHTML = '<span class="thinking-ring"></span><span class="thinking-label">thinking…</span>';
+
+    msg.appendChild(header);
+    msg.appendChild(body);
+    messagesContainer.appendChild(msg);
     scrollToBottom();
   }
 
-  function removeTyping() {
-    const el = document.getElementById("typing-msg");
+  function removeThinking() {
+    const el = document.getElementById("thinking-msg");
     if (el) el.remove();
   }
 
   function scrollToBottom() {
-    chat.scrollTop = chat.scrollHeight;
+    chatArea.scrollTop = chatArea.scrollHeight;
   }
 
   async function sendMessage() {
@@ -698,18 +893,15 @@
     input.value = "";
     input.style.height = "auto";
 
-    // Create new conversation if none selected
-    if (!currentConvId) {
-      newConversation();
-    }
+    if (!currentConvId) newConversation();
 
-    addMessage("user", text);
+    appendMessage("user", text);
     messages.push({ role: "user", content: text });
 
     isStreaming = true;
     sendBtn.style.display = "none";
-    document.getElementById("cancel").style.display = "inline-block";
-    showTyping();
+    cancelBtn.style.display = "inline-block";
+    showThinking();
 
     currentController = new AbortController();
 
@@ -721,11 +913,11 @@
         signal: currentController.signal,
       });
 
-      removeTyping();
+      removeThinking();
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const bubble = addMessage("ai", "");
+      const body = appendMessage("ai", "");
       let fullContent = "";
 
       const reader = res.body.getReader();
@@ -748,13 +940,14 @@
           try {
             const json = JSON.parse(data);
             if (json.error) {
-              bubble.textContent = `⚠️ ${json.error}`;
-              messages.push({ role: "assistant", content: `⚠️ ${json.error}` });
+              body.innerHTML = `<p style="color:var(--error)">${escapeHtml(json.error)}</p>`;
+              messages.push({ role: "assistant", content: json.error });
               syncCurrentFromStorage();
               renderConversationList();
               return;
             }
             if (json.done) {
+              body.innerHTML = formatContent(fullContent);
               messages.push({ role: "assistant", content: fullContent });
               syncCurrentFromStorage();
               renderConversationList();
@@ -762,30 +955,30 @@
             }
             if (json.content !== undefined) {
               fullContent += json.content;
-              bubble.textContent = fullContent;
+              body.textContent = fullContent;
               scrollToBottom();
             }
-          } catch { /* skip parse errors */ }
+          } catch { /* skip */ }
         }
       }
 
       if (fullContent === "") {
-        removeTyping();
-        addMessage("ai", "⚠️ 连接中断，未能收到回复。");
-        messages.push({ role: "assistant", content: "⚠️ 连接中断，未能收到回复。" });
+        removeThinking();
+        appendMessage("ai", "连接中断，未能收到回复");
+        messages.push({ role: "assistant", content: "连接中断，未能收到回复" });
         syncCurrentFromStorage();
         renderConversationList();
       }
     } catch (err) {
       if (err.name === "AbortError") {
-        addMessage("ai", "（已取消）");
-        messages.push({ role: "assistant", content: "（已取消）" });
+        appendMessage("ai", "已取消");
+        messages.push({ role: "assistant", content: "已取消" });
         syncCurrentFromStorage();
         renderConversationList();
       } else {
-        removeTyping();
-        addMessage("ai", `⚠️ 请求失败: ${err.message}`);
-        messages.push({ role: "assistant", content: `⚠️ 请求失败: ${err.message}` });
+        removeThinking();
+        appendMessage("ai", `请求失败: ${err.message}`);
+        messages.push({ role: "assistant", content: `请求失败: ${err.message}` });
         syncCurrentFromStorage();
         renderConversationList();
       }
@@ -793,18 +986,16 @@
       currentController = null;
       isStreaming = false;
       sendBtn.style.display = "inline-block";
-      document.getElementById("cancel").style.display = "none";
+      cancelBtn.style.display = "none";
       sendBtn.disabled = false;
     }
   }
 
   function cancelStreaming() {
-    if (currentController) {
-      currentController.abort();
-    }
+    if (currentController) currentController.abort();
   }
 
-  // ── Init ──────────────────────────────────────────────────────────
+  // ── Init ────────────────────────────────────────────────────────────
   renderConversationList();
   checkHealth();
 </script>
