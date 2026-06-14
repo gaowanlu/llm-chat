@@ -1,5 +1,7 @@
 # LLM Web Chat Service
 
+> 本项目由 **Claude Code** 从零生成，没有人类编写任何一行代码。
+
 一个基于 Node.js + Express 的轻量级 LLM 聊天 Web 服务，支持流式响应（SSE），可对接任意 OpenAI 兼容的 LLM API。
 
 ## 功能特性
@@ -91,7 +93,3 @@ data: {"done": true}
 ```bash
 node main.js
 ```
-
-## 关于本项目
-
-本项目由 **Claude Code** 从零生成，没有人类编写任何一行代码。
