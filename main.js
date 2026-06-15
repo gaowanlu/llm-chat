@@ -10,22 +10,29 @@ const client = new OpenAI({
 
 const model = process.env.LLM_MODEL || "default";
 
+// Get prompt from command line args or use default
+const prompt = process.argv[2] || "请用中文介绍一下你自己。";
+
 async function main() {
-  const stream = client.chat.completions.stream({
-    model: model,
-    messages: [
-      {
-        role: "user",
-        content: "请用中文介绍一下你自己。"
-      }
-    ]
-  });
+  try {
+    const stream = await client.chat.completions.stream({
+      model: model,
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ]
+    });
 
-  for await (const chunk of stream) {
-    process.stdout.write(chunk.choices[0]?.delta?.content || "");
+    for await (const chunk of stream) {
+      process.stdout.write(chunk.choices[0]?.delta?.content || "");
+    }
+    console.log("\n");
+  } catch (err) {
+    console.error(`Error: ${err.message}`);
+    process.exit(1);
   }
-  console.log("\n");
 }
-
 
 main();

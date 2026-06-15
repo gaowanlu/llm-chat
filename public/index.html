@@ -197,6 +197,15 @@
 
     #toggle-sidebar:hover { background: var(--surface-hover); color: var(--text); }
 
+    /* Add focus-visible for better keyboard navigation */
+    button:focus-visible,
+    textarea:focus-visible,
+    .status-indicator:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      z-index: 10;
+    }
+
     header h1 {
       font-family: "Sora", sans-serif;
       font-size: 16px;
@@ -323,6 +332,9 @@
 
     .message.error .message-body {
       color: var(--error);
+      background: rgba(212, 106, 106, 0.1);
+      border-radius: 6px;
+      padding: 12px 16px;
     }
 
     /* ── Welcome ────────────────────────────────────────────────────── */
@@ -614,6 +626,10 @@
   }
 
   function generateId() {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Fallback for older browsers
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 
@@ -886,9 +902,19 @@
     chatArea.scrollTop = chatArea.scrollHeight;
   }
 
+  // Request timeout in milliseconds
+  const REQUEST_TIMEOUT = 300000; // 5 minutes
+
   async function sendMessage() {
     const text = input.value.trim();
     if (!text || isStreaming) return;
+
+    // Validate input length
+    const MAX_INPUT_LENGTH = 5000;
+    if (text.length > MAX_INPUT_LENGTH) {
+      alert(`输入内容过长（${text.length} / ${MAX_INPUT_LENGTH} 字符）`);
+      return;
+    }
 
     input.value = "";
     input.style.height = "auto";
@@ -903,7 +929,13 @@
     cancelBtn.style.display = "inline-block";
     showThinking();
 
+    // Create abort controller for both user cancel and timeout
     currentController = new AbortController();
+
+    // Set up timeout
+    const timeoutId = setTimeout(() => {
+      currentController.abort();
+    }, REQUEST_TIMEOUT);
 
     try {
       const res = await fetch("/api/chat", {
@@ -912,6 +944,9 @@
         body: JSON.stringify({ messages }),
         signal: currentController.signal,
       });
+
+      // Clear timeout after fetch completes (before reading stream)
+      clearTimeout(timeoutId);
 
       removeThinking();
 
@@ -940,16 +975,19 @@
           try {
             const json = JSON.parse(data);
             if (json.error) {
+              // Show error in message body but don't store it as assistant message
               body.innerHTML = `<p style="color:var(--error)">${escapeHtml(json.error)}</p>`;
-              messages.push({ role: "assistant", content: json.error });
-              syncCurrentFromStorage();
+              body.classList.add("error");
+              // Remove error message from storage - don't save errors as conversation history
+              messages.pop(); // Remove the empty ai message we added earlier
+              saveCurrentToStorage();
               renderConversationList();
               return;
             }
             if (json.done) {
               body.innerHTML = formatContent(fullContent);
               messages.push({ role: "assistant", content: fullContent });
-              syncCurrentFromStorage();
+              saveCurrentToStorage();
               renderConversationList();
               return;
             }
@@ -966,20 +1004,18 @@
         removeThinking();
         appendMessage("ai", "连接中断，未能收到回复");
         messages.push({ role: "assistant", content: "连接中断，未能收到回复" });
-        syncCurrentFromStorage();
+        saveCurrentToStorage();
         renderConversationList();
       }
     } catch (err) {
       if (err.name === "AbortError") {
-        appendMessage("ai", "已取消");
-        messages.push({ role: "assistant", content: "已取消" });
-        syncCurrentFromStorage();
-        renderConversationList();
+        // User cancelled - don't add to message history
+        removeThinking();
       } else {
         removeThinking();
         appendMessage("ai", `请求失败: ${err.message}`);
         messages.push({ role: "assistant", content: `请求失败: ${err.message}` });
-        syncCurrentFromStorage();
+        saveCurrentToStorage();
         renderConversationList();
       }
     } finally {
