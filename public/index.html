@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital@0;1&family=Inter:wght@400;500;600&family=Sora:wght@400;600&display=swap" rel="stylesheet">
+  <script src="marked.min.js"></script>
   <style>
     :root {
       --void: #0a0a0a;
@@ -328,6 +329,65 @@
       color: var(--text);
       font-size: 13px;
       line-height: 1.6;
+    }
+
+    /* Markdown styles */
+    .message-body h1,
+    .message-body h2,
+    .message-body h3,
+    .message-body h4,
+    .message-body h5,
+    .message-body h6 {
+      font-weight: 600;
+      margin: 16px 0 8px;
+      color: var(--text);
+    }
+
+    .message-body h1 { font-size: 22px; }
+    .message-body h2 { font-size: 18px; }
+    .message-body h3 { font-size: 16px; }
+    .message-body h4,
+    .message-body h5,
+    .message-body h6 { font-size: 15px; }
+
+    .message-body ul,
+    .message-body ol {
+      margin: 12px 0;
+      padding-left: 24px;
+    }
+
+    .message-body li {
+      margin-bottom: 4px;
+      line-height: 1.5;
+    }
+
+    .message-body blockquote {
+      margin: 12px 0;
+      padding: 8px 12px;
+      border-left: 3px solid var(--accent);
+      background: var(--surface-hover);
+      border-radius: 0 6px 6px 0;
+      color: var(--text-secondary);
+    }
+
+    .message-body blockquote p {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .message-body hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+
+    .message-body a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .message-body a:hover {
+      text-decoration: underline;
     }
 
     .message.error .message-body {
@@ -843,7 +903,11 @@
   }
 
   function formatContent(text) {
-    // Basic markdown-like formatting
+    // Use marked for markdown rendering if available
+    if (typeof marked !== 'undefined') {
+      return marked.parse(text);
+    }
+    // Fallback: Basic markdown-like formatting
     // Code blocks
     text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
       return `<pre><code>${escapeHtml(code.trim())}</code></pre>`;

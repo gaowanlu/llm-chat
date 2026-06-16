@@ -37,7 +37,7 @@ No tests or linting are configured.
 - **openai** (^6.42.0) — OpenAI-compatible SDK (used as an HTTP client for any OpenAI-compatible API)
 - **dotenv** (^16.4.7) — Environment variable loading
 
-### Frontend (`public/index.html`, ~813 lines)
+### Frontend (`public/index.html`, ~1100 lines)
 
 A self-contained SPA with substantial client-side logic:
 
@@ -45,7 +45,12 @@ A self-contained SPA with substantial client-side logic:
 - **SSE client**: Uses `fetch` + `ReadableStream.getReader()` with manual line buffering to parse SSE frames. Decodes UTF-8 chunks and splits on `\n`.
 - **Streaming control**: `AbortController` per request — `cancelStreaming()` calls `.abort()` to cancel in-flight requests.
 - **Health status indicator**: Calls `GET /api/health` on load and on click, shows online/offline badge.
-- **UI features**: Auto-resize textarea, typing indicator (three bouncing dots), error messages with ⚠️ prefix, welcome screen toggle, collapsible sidebar.
+- **UI features**: Auto-resize textarea, typing indicator (three bouncing dots), error messages, welcome screen toggle, collapsible sidebar.
+- **Markdown rendering**: Uses `marked.js` (downloaded to `public/marked.min.js`) for full Markdown support including headers, lists, blockquotes, code blocks, and links.
+
+### Frontend Dependencies (Local)
+
+- **`marked.js`** (v11.1.1) — Markdown parser, downloaded to `public/marked.min.js`. Provides complete Markdown rendering with no external CDN dependencies.
 
 ### Key Patterns
 
@@ -53,3 +58,4 @@ A self-contained SPA with substantial client-side logic:
 - SSE streaming: server writes `data: {...}\n\n` lines per chunk; client uses `ReadableStream` with manual parsing.
 - Conversation history is client-side (`localStorage`), server is stateless — receives the full messages array on each request.
 - Client-side error recovery: connection timeouts, parse errors, and empty responses are all handled gracefully.
+- Markdown content is rendered using `marked.parse()` with fallback to basic formatting if the library is unavailable.
