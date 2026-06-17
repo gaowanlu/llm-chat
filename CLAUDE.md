@@ -14,6 +14,8 @@ node main.js       # Run standalone CLI test script (one-shot chat to stdout)
 npm install         # Install dependencies
 ```
 
+Open http://localhost:3000 in a browser to use the chat interface.
+
 No tests or linting are configured.
 
 ## Configuration
@@ -37,7 +39,7 @@ No tests or linting are configured.
 - **openai** (^6.42.0) — OpenAI-compatible SDK (used as an HTTP client for any OpenAI-compatible API)
 - **dotenv** (^16.4.7) — Environment variable loading
 
-### Frontend (`public/index.html`, ~1100 lines)
+### Frontend (`public/index.html`, ~1150 lines)
 
 A self-contained SPA with substantial client-side logic:
 
@@ -47,10 +49,21 @@ A self-contained SPA with substantial client-side logic:
 - **Health status indicator**: Calls `GET /api/health` on load and on click, shows online/offline badge.
 - **UI features**: Auto-resize textarea, typing indicator (three bouncing dots), error messages, welcome screen toggle, collapsible sidebar.
 - **Markdown rendering**: Uses `marked.js` (downloaded to `public/marked.min.js`) for full Markdown support including headers, lists, blockquotes, code blocks, and links.
+- **Delete confirmation**: Deleting conversations shows a confirmation dialog with conversation title and automatically switches to a new conversation if the deleted item was the active one.
 
 ### Frontend Dependencies (Local)
 
 - **`marked.js`** (v11.1.1) — Markdown parser, downloaded to `public/marked.min.js`. Provides complete Markdown rendering with no external CDN dependencies.
+
+### UI Components
+
+- **Sidebar**: Collapsible conversation list showing conversation title, last activity timestamp, and delete button
+- **Delete button**: Garbage can icon with hover effect, confirms deletion before removing conversation
+- **Status indicator**: Health check badge showing connection status (green for online, red for offline)
+
+### Recent Changes
+
+- **2026-06-17**: Added delete confirmation dialog with conversation title, trash icon for delete button, and automatic switch to new conversation after deletion
 
 ### Key Patterns
 
