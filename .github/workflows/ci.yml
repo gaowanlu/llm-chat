@@ -1,0 +1,50 @@
+name: CI - Verify Server
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Verify server starts
+        run: |
+          # Create .env file with test configuration
+          echo "LLM_API_KEY=test-key" > .env
+          echo "LLM_BASE_URL=http://127.0.0.1:8080/v1" >> .env
+          echo "LLM_MODEL=test-model" >> .env
+
+          # Start server in background
+          node server.js &
+          SERVER_PID=$!
+
+          # Wait for server to start
+          sleep 3
+
+          # Check if server is running
+          if curl -s http://localhost:3000/api/health | grep -q '"status":"ok"'; then
+            echo "✓ Server is running and health check passed"
+            exit 0
+          else
+            echo "✗ Server health check failed"
+            exit 1
+          fi
+
+          # Cleanup
+          kill $SERVER_PID
