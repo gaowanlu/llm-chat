@@ -143,6 +143,21 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// Preset system prompts
+const PRESET_PROMPTS = {
+  default: "你是一个有用的 AI 助手。",
+  developer: "你是一个专业的软件开发工程师。你擅长各种编程语言、算法和系统设计，能够提供高质量的代码示例和技术建议。",
+  translator: "你是一个专业的翻译专家。你擅长中英互译，能够准确、流畅地翻译各种类型的内容。",
+  writer: "你是一个专业的作家。你擅长各种文体的写作，包括小说、散文、议论文等，能够提供富有创意和文采的内容。",
+  tutor: "你是一个耐心的老师。你擅长解释复杂的概念，提供循序渐进的指导，帮助学生理解和掌握知识。",
+  coder: "你是一个专业的编程助手。你专注于提供准确、高效的代码解决方案，注重代码质量和最佳实践。",
+};
+
+// Preset prompts endpoint
+app.get("/api/presets", (req, res) => {
+  res.json({ prompts: PRESET_PROMPTS });
+});
+
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", model: llmConfig.model });

@@ -71,8 +71,45 @@
     }
 
     .sidebar-header {
-      padding: 20px 16px 16px;
+      padding: 16px;
       border-bottom: 1px solid var(--border);
+    }
+
+    .system-prompt-section {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .system-prompt-label {
+      font-size: 11px;
+      font-family: "IBM Plex Mono", monospace;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      display: block;
+      letter-spacing: 0.03em;
+    }
+
+    .system-prompt-textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      font-family: "Inter", sans-serif;
+      resize: vertical;
+      min-height: 60px;
+      box-sizing: border-box;
+    }
+
+    .system-prompt-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .system-prompt-textarea::placeholder {
+      color: var(--text-tertiary);
     }
 
     .new-chat-btn {
@@ -96,6 +133,30 @@
     .new-chat-btn:hover {
       border-color: var(--text-secondary);
       color: var(--text);
+    }
+
+    .clear-all-btn {
+      width: 100%;
+      padding: 8px 14px;
+      margin-top: 8px;
+      border: 1px solid var(--error);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--error);
+      font-size: 12px;
+      font-family: "Inter", sans-serif;
+      cursor: pointer;
+      transition: all 0.12s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      letter-spacing: 0.02em;
+    }
+
+    .clear-all-btn:hover {
+      background: rgba(212, 106, 106, 0.1);
+      color: #e8a8a8;
     }
 
     .conversations-list {
@@ -217,6 +278,25 @@
       font-size: 16px;
       font-weight: 600;
       letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .model-indicator {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 11px;
+      color: var(--text-secondary);
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: var(--surface-hover);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .model-indicator:hover {
+      color: var(--text);
+      border-color: var(--text-secondary);
     }
 
     .header-right {
@@ -631,6 +711,17 @@
       <button class="new-chat-btn" onclick="newConversation()">
         <span>+</span> 新建对话
       </button>
+      <button class="clear-all-btn" onclick="clearAllConversations()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h8"/><path d="M6 3v8"/><path d="M10 3v8"/><path d="M3 11h8"/><path d="M4 3h6a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-8a1 1 0 0 1-1-1z"/></svg>
+        清空所有对话
+      </button>
+    </div>
+    <div class="system-prompt-section">
+      <label class="system-prompt-label" for="system-prompt">系统提示词</label>
+      <textarea id="system-prompt" class="system-prompt-textarea" placeholder="可选：输入系统提示词来定义 AI 的角色和行为..." rows="3"></textarea>
+      <div class="system-prompt-hint" style="font-size: 11px; color: var(--text-tertiary); margin-top: 6px; line-height: 1.4;">
+        留空使用默认行为
+      </div>
     </div>
     <div class="conversations-list" id="conversations-list"></div>
   </aside>
@@ -648,7 +739,7 @@
             <line x1="2" y1="12" x2="12" y2="12"/>
           </svg>
         </button>
-        <h1>Chat</h1>
+        <h1>Chat <span class="model-indicator" id="model-indicator">未知模型</span></h1>
       </div>
       <div class="header-right">
         <span class="status-indicator" id="status" onclick="checkHealth()">检测中</span>
@@ -673,7 +764,7 @@
             <button id="cancel" onclick="cancelStreaming()" style="display:none">取消</button>
           </div>
         </div>
-        <div class="input-footer">模型: 本地 LLM · 数据保存在本地</div>
+        <div class="input-footer">数据保存在本地</div>
       </div>
     </div>
   </main>
@@ -690,6 +781,8 @@
   const statusEl = document.getElementById("status");
   const sidebar = document.getElementById("sidebar");
   const convListEl = document.getElementById("conversations-list");
+  const systemPromptInput = document.getElementById("system-prompt");
+  const modelIndicator = document.getElementById("model-indicator");
 
   // ── Storage ─────────────────────────────────────────────────────────
   const STORAGE_KEY = "llm-chat-conversations";
@@ -714,6 +807,8 @@
   let conversations = loadConversations();
   let currentConvId = null;
   let messages = [];
+  let systemPromptInputValue = "";
+  let currentModel = "未知模型";
 
   // ── Sidebar ─────────────────────────────────────────────────────────
   function toggleSidebar() {
@@ -776,18 +871,26 @@
     }
   }
 
-  function newConversation() {
+  async function newConversation() {
     if (currentConvId && messages.length > 0) saveCurrentToStorage();
     const conv = {
       id: generateId(),
       title: "新对话",
       messages: [],
+      systemPrompt: systemPromptInputValue,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
     conversations.push(conv);
     currentConvId = conv.id;
     messages = [];
+    // Add system prompt to messages if set
+    if (systemPromptInputValue) {
+      messages.push({ role: "system", content: systemPromptInputValue });
+    }
+    // Clear system prompt for new conversation
+    systemPromptInputValue = "";
+    systemPromptInput.value = "";
     saveConversations(conversations);
     renderConversationList();
     showWelcome();
@@ -799,7 +902,14 @@
     const conv = conversations.find((c) => c.id === convId);
     if (!conv) return;
     currentConvId = conv.id;
-    messages = [...conv.messages];
+    // Load system prompt and update input
+    systemPromptInputValue = conv.systemPrompt || "";
+    systemPromptInput.value = systemPromptInputValue;
+    // Rebuild messages array with system prompt at the beginning
+    messages = conv.messages.filter((m) => m.role !== "system");
+    if (systemPromptInputValue) {
+      messages.unshift({ role: "system", content: systemPromptInputValue });
+    }
     renderConversationList();
     renderMessages();
   }
@@ -825,12 +935,27 @@
     }
   }
 
+  function clearAllConversations() {
+    if (conversations.length === 0) {
+      return;
+    }
+    if (!confirm(`确定要删除所有 ${conversations.length} 个对话吗？此操作不可恢复。`)) {
+      return;
+    }
+    conversations = [];
+    saveConversations(conversations);
+    currentConvId = null;
+    messages = [];
+    newConversation();
+  }
+
   function saveCurrentToStorage() {
     if (!currentConvId) return;
     const conv = conversations.find((c) => c.id === currentConvId);
     if (!conv) return;
     conv.messages = messages.map((m) => ({ ...m }));
     conv.updatedAt = Date.now();
+    conv.systemPrompt = systemPromptInputValue;
     const firstUser = messages.find((m) => m.role === "user");
     if (firstUser && conv.title === "新对话") {
       conv.title = firstUser.content.slice(0, 30) + (firstUser.content.length > 30 ? "…" : "");
@@ -873,10 +998,14 @@
   function checkHealth() {
     fetch("/api/health")
       .then((r) => r.ok ? r.json() : Promise.reject())
-      .then(() => {
+      .then((data) => {
         isConnected = true;
         statusEl.textContent = "已连接";
         statusEl.className = "status-indicator online";
+        if (data.model) {
+          currentModel = data.model;
+          modelIndicator.textContent = currentModel;
+        }
       })
       .catch(() => {
         isConnected = false;
@@ -1119,9 +1248,32 @@
     }
   }
 
-  function cancelStreaming() {
+  async function cancelStreaming() {
     if (currentController) currentController.abort();
   }
+
+  // Update system prompt when input changes
+  systemPromptInput.addEventListener("input", () => {
+    systemPromptInputValue = systemPromptInput.value;
+    // Also update current conversation's system prompt immediately
+    if (currentConvId) {
+      const conv = conversations.find((c) => c.id === currentConvId);
+      if (conv) {
+        conv.systemPrompt = systemPromptInputValue;
+        // Update or add system message in messages array
+        if (systemPromptInputValue) {
+          if (messages.length > 0 && messages[0].role === "system") {
+            messages[0] = { role: "system", content: systemPromptInputValue };
+          } else {
+            messages.unshift({ role: "system", content: systemPromptInputValue });
+          }
+        } else if (messages.length > 0 && messages[0].role === "system") {
+          messages.shift();
+        }
+        saveConversations(conversations);
+      }
+    }
+  });
 
   // ── Init ────────────────────────────────────────────────────────────
   renderConversationList();
